@@ -16,9 +16,24 @@ from support import (MODEL, SYSTEM_PROMPT, call_local, execute_tool, mcp_client,
 
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
-TONE_ADDENDUM = ""                       # ✏️ Build 4, step 4.1, intelligence goal
+TONE_ADDENDUM = """
+
+=== WHEN A CUSTOMER IS ABUSIVE ===
+
+Abuse means insults, contempt, or a legal threat, with no real question about
+the trip. A customer who is merely upset or blunt about the disruption is not
+abusive: help them as usual.
+
+For abuse, do not run the normal process and do not give an entitlements
+rundown. Acknowledge their frustration once, in one calm sentence, without
+defensiveness. Call escalate_to_human with the reason and a short summary for
+the human, and tell the customer a person will take over. Promise no
+compensation, refund, hotel or outcome, never call issue_voucher, and never
+offer a refund pathway in reply to a legal threat.
+"""                                      # ✏️ Build 4, step 4.1, intelligence goal
 EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
 LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
+# next_available_day is owned by the MCP server (support/mcp_server.py) since 2.2.
 
 
 def text_of(response) -> str:
@@ -65,25 +80,24 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ✏�
         thinking={"type": "adaptive"}, tools=tools, messages=messages,
     )
 
-    answer = ""
     turns = 1
     while response.stop_reason == "tool_use" and turns < MAX_TOOL_CALLS:
-        messages.append({"role": "assistant", "content": text_of(response)})
+        messages.append({"role": "assistant", "content": response.content})
         messages.append({"role": "user", "content": tool_results(response)})
-        answer = text_of(response)
         response = client.messages.create(
             model=MODEL, max_tokens=4096, system=runtime_preamble() + SYSTEM_PROMPT + TONE_ADDENDUM,
             thinking={"type": "adaptive"}, tools=tools, messages=messages,
         )
         turns += 1
 
-    return answer
+    # The answer is the text of the last response, not of a tool-calling turn.
+    return text_of(response)
 
 
 def tool_list() -> List[Dict[str, Any]]:                   # ✏️ Build 2, step 2.2
     """Given. Exactly what Claude is offered on every turn; run.py --show-tools
     prints this list."""
-    return build_tools() + EXTRA_TOOLS
+    return build_tools() + EXTRA_TOOLS + mcp_client.tools()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -118,18 +132,25 @@ def build_tools() -> List[Dict[str, Any]]:                 # ✏️ Build 1, ste
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "flight_no": {"type": "string"},
-                    "date": {"type": "string", "description": "MM/DD/YYYY"},
+                    "flight_no": {"type": "string", "description": "Flight number as on the booking segment, e.g. LK415"},
+                    "date": {"type": "string", "description": "Local flight date in ISO format YYYY-MM-DD, e.g. 2025-05-08. Not MM/DD/YYYY."},
                 },
                 "required": ["flight_no", "date"],
             },
         },
         {
             "name": "search_alternatives",
-            "description": "search",
+            "description": (
+                "Search for rebooking options for the booking's disrupted segment: other "
+                "Larkspur flights on the same route in the allowed date window, with seats "
+                "left, departure and arrival times, current status and an option_id for "
+                "each. Use it once the disruption is confirmed (cancelled or badly delayed), "
+                "before offering the customer a choice. Read-only: it does not hold or "
+                "book anything. Pass an option_id to hold_seat to take one."
+            ),
             "input_schema": {
                 "type": "object",
-                "properties": {"pnr": {"type": "string"}},
+                "properties": {"pnr": {"type": "string", "description": "Confirmation code of the booking being rebooked"}},
                 "required": ["pnr"],
             },
         },
