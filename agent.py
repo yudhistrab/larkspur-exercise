@@ -31,65 +31,10 @@ the human, and tell the customer a person will take over. Promise no
 compensation, refund, hotel or outcome, never call issue_voucher, and never
 offer a refund pathway in reply to a legal threat.
 """                                      # ✏️ Build 4, step 4.1, intelligence goal
-
-
-def fare_rules(section: str) -> Any:
-    """Return one section of the Handbook excerpt, exactly as written in
-    data/americas/fare_rules_excerpt.md. A section is found by its number ("6")
-    or by words from its title ("care while you wait"). If nothing matches, say
-    so and list what exists: nothing is paraphrased, guessed or invented."""
-    import re
-    from pathlib import Path
-    path = Path(__file__).resolve().parent / "data" / "americas" / "fare_rules_excerpt.md"
-    text = path.read_text(encoding="utf-8")
-    sections = []                                    # (number, title, full text)
-    for part in re.split(r"(?m)^### ", text)[1:]:    # [0] is the preamble above section 4
-        title = part.split("\n", 1)[0].strip()
-        sections.append((title.split(".", 1)[0].strip(), title, "### " + part.rstrip()))
-    words = [w for w in re.findall(r"[a-z0-9]+", str(section).lower()) if w != "section"]
-    for number, title, body in sections:             # a bare number wins first
-        if words == [number]:
-            return body
-    for number, title, body in sections:             # then every word in the title
-        if words and all(w in title.lower() for w in words):
-            return body
-    return {"error": "No section of the fare rules matches %r." % (section,),
-            "available_sections": [title for _, title, _ in sections]}
-
-
-EXTRA_TOOLS: List[Dict[str, Any]] = [    # ✏️ Build 2, step 2.1: schemas for the tools you add
-    {
-        "name": "fare_rules",
-        "description": (
-            "Return the Larkspur fare rules and Customer Commitment text (Handbook v14.3, "
-            "sections 4 to 7), word for word from the published excerpt. Use it when the "
-            "customer asks WHY something is or is not covered, or where a rule is written: "
-            "why no hotel, what their fare family allows, what chat cannot do. Quote what it "
-            "returns instead of paraphrasing. It is reference reading, not a decision about "
-            "this booking: check_policy stays the only source for what this customer is owed, "
-            "and if the two ever differ, check_policy wins. It needs no booking details. Pass "
-            "the one section you need and it returns that section's full text, or says plainly "
-            "that no section matches and lists the ones that exist."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "section": {
-                    "type": "string",
-                    "description": "Which section to read: its number ('6') or words from its "
-                                   "title ('care while you wait', 'fare families', "
-                                   "'when we delay', 'chat automation').",
-                },
-            },
-            "required": ["section"],
-        },
-    },
-]
-LOCAL_TOOLS: Dict[str, Any] = {          # ✏️ Build 2, step 2.1: the functions behind them
-    "fare_rules": fare_rules,
-}
-# next_available_day is owned by the MCP server (support/mcp_server.py) since 2.2.
-# fare_rules is written here: tool_list() keeps the MCP copy of that name out.
+EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
+LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
+# next_available_day and fare_rules are owned by the MCP server (support/mcp_server.py):
+# tool_list() offers them, so neither is written here.
 
 
 def text_of(response) -> str:
@@ -153,12 +98,7 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ✏�
 def tool_list() -> List[Dict[str, Any]]:                   # ✏️ Build 2, step 2.2
     """Given. Exactly what Claude is offered on every turn; run.py --show-tools
     prints this list."""
-    # A name written in EXTRA_TOOLS owns that name: the MCP server's copy of it is
-    # neither offered nor dispatched, so one name never has two owners.
-    mine = {t["name"] for t in EXTRA_TOOLS}
-    remote = [t for t in mcp_client.tools() if t["name"] not in mine]
-    mcp_client.tool_names.difference_update(mine)
-    return build_tools() + EXTRA_TOOLS + remote
+    return build_tools() + EXTRA_TOOLS + mcp_client.tools()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
