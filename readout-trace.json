@@ -4,8 +4,8 @@
   "tool_names": [
     "lookup_booking",
     "get_flight_status",
-    "fare_rules",
-    "check_policy"
+    "check_policy",
+    "fare_rules"
   ],
   "saw_thinking": true,
   "used_format": false,
@@ -13,11 +13,11 @@
   "streamed": false,
   "deltas_seen": 0,
   "tokens": {
-    "input": 18655,
-    "output": 950,
+    "input": 18125,
+    "output": 1127,
     "cache_read": 0,
     "cache_write": 0
   },
   "cache_hit_ratio": null,
-  "elapsed": 12.4
+  "elapsed": 14.7
 }

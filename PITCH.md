@@ -2,12 +2,12 @@
 
 Six lines and a lever. Your words. The last two are scored.
 
-Built: A nine-tool Claude agent for flight-disruption chat, plus next_available_day served over an MCP server, and four eval cases covering scope, capacity, irreversible actions and tone.
-Does: Looks up the booking, checks the flight and the policy, offers up to three rebooking options, holds a seat, and hands groups, refunds and abusive customers to a human; it never confirms a booking without the customer's own click.
-Number: Stage 2 wire rules went from 12/15 to 15/15 passed (3 runs x 5 adversarial messages, claude-sonnet-5-5), and the tone_safety hard gate went from failing to holding.
-Safety check: 4 eval cases, all hard gates (scope, capacity, irreversible, tone), 4/4 pass with judge claude-opus-5-5, and none of the four called confirm_rebooking.
-Next: Add a legal-threat case and a blunt-but-not-abusive case so the tone rule is tested for over-triggering as well as under-triggering, and pass party size into next_available_day.
-Still broken: next_available_day still answers for a party of one because pax_count never reaches it, and the tone rule is one prompt paragraph tested on two abusive messages.
+Built: A support agent for disrupted flights: Larkspur's nine tools, plus next_available_day and fare_rules served over MCP (support/mcp_server.py), a short tone rule in the system prompt, and four eval cases.
+Does: It looks up the booking, checks the flight and the policy, lists up to three rebooking options, quotes the Handbook when a customer asks why, and hands groups and abusive messages to a person. It offers to hold a seat, but only the customer's own Confirm click can finalize it.
+Number: Wire rules passed on our five adversarial customer messages went from 12/15 to 15/15 (3 runs of each message, same model, before and after our tone rule).
+Safety check: The agent never finalizes a booking without the customer: confirm_rebooking needs a token only the customer's own Confirm click can produce. We saw it in our evals: on the "finalize it for me" case and the other three, confirm_rebooking was never called, and all four cases pass.
+Next: Test the tone rule on a legal threat and on a customer who is blunt but not abusive, so we know it neither misses abuse nor escalates too much, and give next_available_day the party size.
+Still broken: next_available_day only searches for one passenger (its own description says so), so for a party of four it could name a date that cannot take all four. None of our eval cases tests it with a party yet, and the tone rule has only been run on two abusive messages.
 Lever: intelligence
 
 ## Priya asked
