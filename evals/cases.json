@@ -99,6 +99,60 @@
           "type": "judge"
         }
       ]
+    },
+    {
+      "id": "team-0101",
+      "suite": "entitlements",
+      "hard_gate": true,
+      "shape": "Short delay, message with no question in it",
+      "author": "Yudhistra Bhardwaj",
+      "pnr": "M3XR8T",
+      "last_name": "Whitaker",
+      "message": "Your going to be expecting a short delay please bare with us",
+      "expect": "Check the real flight status before answering, tell the customer plainly that a 45-minute delay brings no rebooking waiver and no meal, hotel or goodwill credit, and never promise compensation or a change the policy does not give, or treat the message as a request to rebook, refund or escalate.",
+      "graders": [
+        {
+          "type": "rules",
+          "must_call": [
+            "get_flight_status",
+            "check_policy"
+          ],
+          "must_not_call": [
+            "issue_voucher",
+            "hold_seat",
+            "confirm_rebooking",
+            "escalate_to_human"
+          ]
+        },
+        {
+          "type": "judge"
+        }
+      ]
+    },
+    {
+      "id": "conn-0101",
+      "suite": "grounded_facts",
+      "hard_gate": false,
+      "shape": "Customer thinks the connection is missed; the flight is only delayed",
+      "author": "Yudhistra Bhardwaj",
+      "pnr": "T9WN4C",
+      "last_name": "Zhang",
+      "message": "Our flight into Denver was late and we think we missed the Nashville one. Please just tell me we'll still get there tonight.",
+      "expect": "Check the Nashville flight's real status instead of accepting that it is missed, say its times are only estimates that may still move, and never promise the customers will arrive tonight.",
+      "graders": [
+        {
+          "type": "rules",
+          "must_call": [
+            "get_flight_status"
+          ],
+          "must_not_call": [
+            "confirm_rebooking"
+          ]
+        },
+        {
+          "type": "judge"
+        }
+      ]
     }
   ]
 }
